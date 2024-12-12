@@ -9,16 +9,13 @@ from hashlib import sha256
 import json
 import platform
 
-
 def format_key(key_str):
     return sha256(key_str.encode()).digest()
-
 
 def generate_file_metadata_key(file_name):
     file_stat = os.stat(file_name)
     metadata_string = f"{file_name}{platform.node()}{file_stat.st_ino}"
     return sha256(metadata_string.encode()).digest()
-
 
 def encrypt_data(data, key):
     iv = os.urandom(16)
@@ -31,7 +28,6 @@ def encrypt_data(data, key):
     encrypted = encryptor.update(padded_data) + encryptor.finalize()
 
     return urlsafe_b64encode(iv + encrypted).decode('utf-8')
-
 
 def decrypt_data(encrypted_data, key):
     decoded_data = urlsafe_b64decode(encrypted_data)
@@ -46,7 +42,6 @@ def decrypt_data(encrypted_data, key):
     data = unpadder.update(padded_data) + unpadder.finalize()
     return data
 
-
 def initialize_file(file_name, key, headers):
     data = {"headers": headers, "rows": []}
     encrypted_data = encrypt_data(json.dumps(data).encode('utf-8'), key)
@@ -59,7 +54,6 @@ def initialize_file(file_name, key, headers):
     with open(file_name, 'w') as f:
         f.write(re_encrypted_data)
 
-
 def load_file(file_name, key):
     metadata_key = generate_file_metadata_key(file_name)
     
@@ -68,7 +62,6 @@ def load_file(file_name, key):
 
     decrypted_data = decrypt_data(re_encrypted_data, metadata_key)
     return json.loads(decrypt_data(decrypted_data, key).decode('utf-8'))
-
 
 def save_file(file_name, key, data):
     encrypted_data = encrypt_data(json.dumps(data).encode('utf-8'), key)
@@ -79,7 +72,6 @@ def save_file(file_name, key, data):
     with open(file_name, 'w') as f:
         f.write(re_encrypted_data)
 
-
 def encrypt_row(row, row_key_str):
     row_data = json.dumps(row).encode('utf-8')
 
@@ -89,7 +81,6 @@ def encrypt_row(row, row_key_str):
 
     return encrypted_row
 
-
 def decrypt_row(encrypted_row, row_key_str):
     row_key = format_key(row_key_str)
 
@@ -97,7 +88,6 @@ def decrypt_row(encrypted_row, row_key_str):
 
     decrypted_row = json.loads(decrypted_data.decode('utf-8'))
     return decrypted_row
-
 
 def main():
     file_name = input("Enter the file name: ").strip()
@@ -142,6 +132,7 @@ def main():
                     row_key_str = input("Enter the key for this row: ").strip()
                     try:
                         decrypted_row = decrypt_row(data["rows"][row_num], row_key_str)
+                        print("Columns Names: " + ", ".join(data["headers"]))
                         print("Decrypted Row:", decrypted_row)
                     except Exception:
                         print("Failed to decrypt the row. Invalid key.")
@@ -163,6 +154,7 @@ def main():
                     row_key_str = input("Enter the key for this row: ").strip()
                     try:
                         decrypted_row = decrypt_row(data["rows"][row_num], row_key_str)
+                        print("Column Names: " + ", ".join(data["headers"]))
                         print("Current Row:", decrypted_row)
                         new_row = input("Enter the new row (comma-separated): ").strip().split(',')
                         encrypted_row = encrypt_row(new_row, row_key_str)
@@ -197,7 +189,6 @@ def main():
 
         else:
             print("Invalid choice. Please try again.")
-
 
 if __name__ == "__main__":
     main()
